@@ -6,7 +6,7 @@ const regd_users = express.Router();
 let users = [
     { username: 'admin', password: 'admin' }
 ];
-const JWT_SECRET = ('hsjdfh_234HAJKSHKDF&4');
+const JWT_SECRET = ('mySuperSecretKey123');
 
 // Function to check if the username is valid (returns boolean)
 const isValid = (username) => {
@@ -40,31 +40,57 @@ regd_users.post("/login", (req, res) => {
     }
 });
 
-// Add a book review (placeholder for your code)
 regd_users.put("/auth/review/:isbn", (req, res) => {
-    // Placeholder response, you can implement this as needed
     const isbn = req.params.isbn;
-  const review = req.query.review;  // Get the review text from the query string
-  const username = req.user.username; // Username from the JWT
+    const review = req.query.review;
+    const username = req.user.username; // Username from the JWT
 
-  if (!review) {
-    return res.status(400).json({ message: "Review text is required" });
-  }
-
-  if (books[isbn]) {
-    // Ensure the book has a reviews object
-    if (!books[isbn].reviews) {
-      books[isbn].reviews = {};
+    if (!username) {
+        return res.status(401).json({ message: "Unauthorized. Please log in" });
     }
-    // Add or update the review for this username
-    books[isbn].reviews[username] = review;
-    return res.status(200).json({ 
-      message: "Review added/updated successfully", 
-      reviews: books[isbn].reviews 
+
+    if (!review) {
+        return res.status(400).json({ message: "Review text is required" });
+    }
+
+    if (!books[isbn]) {
+        books[isbn] = { title: "Unknown Title", author: "Unknown Author", reviews: {} };
+    }
+
+    // If the user has already reviewed the book, modify the existing review
+    if (books[isbn].reviews[username]) {
+        books[isbn].reviews[username] = review; // Modify the review
+    } else {
+        // Otherwise, add a new review
+        books[isbn].reviews[username] = review;
+    }
+
+    res.status(200).json({
+        message: `Review for ISBN ${isbn} by user ${username} has been added/updated.`,
+        book: books[isbn]
     });
-  } else {
-    return res.status(404).json({ message: "Book not found" });
-  }
+});
+
+// Delete a book review
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+    const isbn = req.params.isbn;
+    const username = req.user.username; // Username from the JWT
+
+    if (!username) {
+        return res.status(401).json({ message: "Unauthorized. Please log in" });
+    }
+
+    if (!books[isbn] || !books[isbn].reviews[username]) {
+        return res.status(404).json({ message: "Review not found" });
+    }
+
+    // Delete the review for the specific ISBN and username
+    delete books[isbn].reviews[username];
+
+    res.status(200).json({
+        message: `Review for ISBN ${isbn} by user ${username} has been deleted.`,
+        book: books[isbn]
+    });
 });
 
 module.exports.authenticated = regd_users;
